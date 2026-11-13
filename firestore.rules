@@ -1,0 +1,629 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        || request.auth.token.email.lower() == 'thiagocfraga86@gmail.com'
+      );
+    }
+
+    function currentEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function sanitizeEmail(email) {
+      return email.lower().replace('[^a-zA-Z0-9]', '_');
+    }
+
+    function inviteDocPath(tabDocId, email) {
+      return /databases/$(database)/documents/tabInvites/$(tabDocId + '__' + sanitizeEmail(email));
+    }
+
+    function isTabParentMember(tabDocId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/sharedTabs/$(tabDocId))
+        && (
+          get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.ownerUid == request.auth.uid
+          || currentEmail() in get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.memberEmails
+        );
+    }
+
+    function isTabParentEditor(tabDocId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/sharedTabs/$(tabDocId))
+        && (
+          get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.ownerUid == request.auth.uid
+          || currentEmail() in get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.editorEmails
+        );
+    }
+
+    function isValidSharedTab(data) {
+      return data.keys().hasAll([
+          'tabId', 'label', 'ownerUid', 'ownerEmail', 'ownerName',
+          'shareCode', 'isShared', 'memberEmails', 'editorEmails',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'tabId', 'label', 'ownerUid', 'ownerEmail', 'ownerName',
+          'shareCode', 'isShared', 'memberEmails', 'editorEmails',
+          'createdAt', 'updatedAt'
+        ])
+        && data.tabId is string && data.tabId.size() >= 1 && data.tabId.size() <= 64 && data.tabId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.label is string && data.label.size() >= 1 && data.label.size() <= 60
+        && isValidId(data.ownerUid)
+        && data.ownerEmail is string && data.ownerEmail.size() >= 3 && data.ownerEmail.size() <= 120
+        && data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 80
+        && data.shareCode is string && data.shareCode.size() >= 4 && data.shareCode.size() <= 64
+        && data.isShared is bool
+        && data.memberEmails is list && data.memberEmails.size() >= 1 && data.memberEmails.size() <= 20 && data.memberEmails[0] is string
+        && data.editorEmails is list && data.editorEmails.size() >= 1 && data.editorEmails.size() <= 20 && data.editorEmails[0] is string;
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'role', 'joinedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'name', 'role', 'joinedAt'])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.role in ['editor', 'viewer'];
+    }
+
+    function isValidInvite(data) {
+      return data.keys().hasAll([
+          'tabDocId', 'tabId', 'tabLabel', 'inviterUid', 'inviterEmail',
+          'inviterName', 'inviteeEmail', 'inviteeName', 'role', 'status',
+          'shareCode', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'tabDocId', 'tabId', 'tabLabel', 'inviterUid', 'inviterEmail',
+          'inviterName', 'inviteeEmail', 'inviteeName', 'role', 'status',
+          'shareCode', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.tabDocId)
+        && data.tabId is string && data.tabId.size() >= 1 && data.tabId.size() <= 64 && data.tabId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.tabLabel is string && data.tabLabel.size() >= 1 && data.tabLabel.size() <= 60
+        && isValidId(data.inviterUid)
+        && data.inviterEmail is string && data.inviterEmail.size() >= 3 && data.inviterEmail.size() <= 120
+        && data.inviterName is string && data.inviterName.size() >= 1 && data.inviterName.size() <= 80
+        && data.inviteeEmail is string && data.inviteeEmail.size() >= 3 && data.inviteeEmail.size() <= 120
+        && data.inviteeName is string && data.inviteeName.size() >= 1 && data.inviteeName.size() <= 80
+        && data.role in ['editor', 'viewer']
+        && data.status in ['pending', 'accepted', 'declined']
+        && data.shareCode is string && data.shareCode.size() >= 4 && data.shareCode.size() <= 64;
+    }
+
+    function isValidSharedNote(data) {
+      return data.keys().hasAll([
+          'noteId', 'tabDocId', 'tabId', 'title', 'previewText', 'fullContent',
+          'color', 'pinColor', 'penColor', 'fontStyle', 'isPinned', 'rotation',
+          'authorUid', 'authorEmail', 'authorName', 'commentsCount',
+          'displayCreatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'noteId', 'tabDocId', 'tabId', 'title', 'previewText', 'fullContent',
+          'color', 'pinColor', 'penColor', 'fontStyle', 'isPinned', 'rotation',
+          'authorUid', 'authorEmail', 'authorName', 'commentsCount',
+          'displayCreatedAt', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.noteId)
+        && isValidId(data.tabDocId)
+        && data.tabId is string && data.tabId.size() >= 1 && data.tabId.size() <= 64 && data.tabId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.title is string && data.title.size() <= 140
+        && data.previewText is string && data.previewText.size() <= 400
+        && data.fullContent is string && data.fullContent.size() <= 10000
+        && data.color is string && data.color.size() >= 1 && data.color.size() <= 24
+        && data.pinColor is string && data.pinColor.size() >= 1 && data.pinColor.size() <= 24
+        && data.penColor is string && data.penColor.size() >= 1 && data.penColor.size() <= 24
+        && data.fontStyle is string && data.fontStyle.size() >= 1 && data.fontStyle.size() <= 24
+        && data.isPinned is bool
+        && data.rotation is number
+        && isValidId(data.authorUid)
+        && data.authorEmail is string && data.authorEmail.size() >= 3 && data.authorEmail.size() <= 120
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+        && data.commentsCount is number && data.commentsCount >= 0
+        && data.displayCreatedAt is string && data.displayCreatedAt.size() >= 1 && data.displayCreatedAt.size() <= 40;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll([
+          'commentId', 'noteId', 'tabDocId', 'authorUid',
+          'authorEmail', 'authorName', 'text', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'commentId', 'noteId', 'tabDocId', 'authorUid',
+          'authorEmail', 'authorName', 'text', 'createdAt'
+        ])
+        && isValidId(data.commentId)
+        && isValidId(data.noteId)
+        && isValidId(data.tabDocId)
+        && isValidId(data.authorUid)
+        && data.authorEmail is string && data.authorEmail.size() >= 3 && data.authorEmail.size() <= 120
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+        && data.text is string && data.text.size() >= 1 && data.text.size() <= 1000;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'age', 'ageNotDeclared', 'location',
+          'locationNotDeclared', 'gender', 'sexualOrientation',
+          'generalInterests', 'relatedInterests',
+          'autoFilledFromGoogle', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'age', 'ageNotDeclared', 'location',
+          'locationNotDeclared', 'gender', 'sexualOrientation',
+          'generalInterests', 'relatedInterests',
+          'autoFilledFromGoogle', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && data.age is number && data.age >= 0 && data.age <= 130
+        && data.ageNotDeclared is bool
+        && data.location is string && data.location.size() <= 160
+        && data.locationNotDeclared is bool
+        && data.gender is string && data.gender.size() >= 1 && data.gender.size() <= 60
+        && data.sexualOrientation is string && data.sexualOrientation.size() >= 1 && data.sexualOrientation.size() <= 60
+        && data.generalInterests is list && data.generalInterests.size() <= 15
+        && (data.generalInterests.size() == 0 || data.generalInterests[0] is string)
+        && data.relatedInterests is list && data.relatedInterests.size() <= 20
+        && (data.relatedInterests.size() == 0 || data.relatedInterests[0] is string)
+        && data.autoFilledFromGoogle is bool;
+    }
+
+    function isValidAudienceSegment(data) {
+      return data.keys().hasAll([
+          'uid', 'ageBracket', 'gender', 'regionLabel',
+          'generalInterests', 'relatedInterests', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'ageBracket', 'gender', 'regionLabel',
+          'generalInterests', 'relatedInterests', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.ageBracket is string && data.ageBracket.size() >= 1 && data.ageBracket.size() <= 40
+        && data.gender is string && data.gender.size() >= 1 && data.gender.size() <= 60
+        && data.regionLabel is string && data.regionLabel.size() >= 1 && data.regionLabel.size() <= 80
+        && data.generalInterests is list && data.generalInterests.size() <= 15
+        && (data.generalInterests.size() == 0 || data.generalInterests[0] is string)
+        && data.relatedInterests is list && data.relatedInterests.size() <= 20
+        && (data.relatedInterests.size() == 0 || data.relatedInterests[0] is string);
+    }
+
+    function isValidDailyPromo(data) {
+      return data.keys().hasAll([
+          'tickerText', 'title', 'description', 'sponsorName',
+          'ctaLabel', 'targetUrl', 'noteColor', 'isActive',
+          'updatedByEmail', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'tickerText', 'title', 'description', 'sponsorName',
+          'ctaLabel', 'targetUrl', 'noteColor', 'isActive',
+          'updatedByEmail', 'createdAt', 'updatedAt'
+        ])
+        && data.tickerText is string && data.tickerText.size() >= 1 && data.tickerText.size() <= 240
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.description is string && data.description.size() <= 1200
+        && data.sponsorName is string && data.sponsorName.size() <= 80
+        && data.ctaLabel is string && data.ctaLabel.size() >= 1 && data.ctaLabel.size() <= 60
+        && data.targetUrl is string && data.targetUrl.size() >= 1 && data.targetUrl.size() <= 500
+        && data.noteColor is string && data.noteColor.size() >= 1 && data.noteColor.size() <= 24
+        && data.isActive is bool
+        && data.updatedByEmail is string && data.updatedByEmail.size() >= 3 && data.updatedByEmail.size() <= 120;
+    }
+
+    function isValidPromoCampaign(data) {
+      return data.keys().hasAll([
+          'campaignId', 'sourcePlatform', 'status', 'isActive',
+          'tickerText', 'title', 'description', 'sponsorName', 'priceLabel',
+          'ctaLabel', 'targetUrl', 'noteColor', 'targetGender',
+          'targetAgeMin', 'targetAgeMax', 'targetLocation', 'targetInterests',
+          'curationRationale', 'sourceMethod', 'updatedByEmail',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'campaignId', 'sourcePlatform', 'status', 'isActive',
+          'tickerText', 'title', 'description', 'sponsorName', 'priceLabel',
+          'ctaLabel', 'targetUrl', 'noteColor', 'targetGender',
+          'targetAgeMin', 'targetAgeMax', 'targetLocation', 'targetInterests',
+          'curationRationale', 'sourceMethod', 'updatedByEmail',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.campaignId)
+        && data.sourcePlatform in ['mercadolivre', 'shopee', 'tiktok', 'amazon', 'manual']
+        && data.status in ['pending_curation', 'approved', 'rejected', 'archived']
+        && data.isActive is bool
+        && data.tickerText is string && data.tickerText.size() >= 1 && data.tickerText.size() <= 240
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.description is string && data.description.size() <= 1200
+        && data.sponsorName is string && data.sponsorName.size() <= 80
+        && data.priceLabel is string && data.priceLabel.size() <= 40
+        && data.ctaLabel is string && data.ctaLabel.size() >= 1 && data.ctaLabel.size() <= 60
+        && data.targetUrl is string && data.targetUrl.size() >= 1 && data.targetUrl.size() <= 800
+        && data.noteColor is string && data.noteColor.size() >= 1 && data.noteColor.size() <= 24
+        && data.targetGender in ['all', 'Feminino', 'Masculino', 'Não-binário']
+        && data.targetAgeMin is number && data.targetAgeMin >= 0 && data.targetAgeMin <= 120
+        && data.targetAgeMax is number && data.targetAgeMax >= 0 && data.targetAgeMax <= 120
+        && data.targetAgeMax >= data.targetAgeMin
+        && data.targetLocation is string && data.targetLocation.size() >= 1 && data.targetLocation.size() <= 120
+        && data.targetInterests is list && data.targetInterests.size() <= 15
+        && (data.targetInterests.size() == 0 || data.targetInterests[0] is string)
+        && data.curationRationale is string && data.curationRationale.size() <= 600
+        && data.sourceMethod is string && data.sourceMethod.size() >= 1 && data.sourceMethod.size() <= 60
+        && data.updatedByEmail is string && data.updatedByEmail.size() >= 3 && data.updatedByEmail.size() <= 120;
+    }
+
+    // 1. Shared Tabs
+    match /sharedTabs/{tabDocId} {
+      allow get: if isValidId(tabDocId) && isSignedIn() && (
+        existing().ownerUid == request.auth.uid
+        || currentEmail() in existing().memberEmails
+      );
+      allow list: if isSignedIn() && (
+        existing().ownerUid == request.auth.uid
+        || currentEmail() in existing().memberEmails
+      );
+      allow create: if isValidId(tabDocId)
+        && isSignedIn()
+        && isValidSharedTab(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().ownerEmail == currentEmail()
+        && currentEmail() in incoming().memberEmails
+        && currentEmail() in incoming().editorEmails
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(tabDocId)
+        && isSignedIn()
+        && isValidSharedTab(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().ownerEmail == existing().ownerEmail
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action A: Owner updates tab config, sharing status, or members
+          (
+            existing().ownerUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'label', 'isShared', 'shareCode', 'memberEmails', 'editorEmails', 'updatedAt'
+            ])
+          )
+          // Action B: Invited user accepts their invite and adds ONLY their own email according to invite role
+          || (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'memberEmails', 'editorEmails', 'updatedAt'
+            ])
+            && exists(inviteDocPath(tabDocId, currentEmail()))
+            && get(inviteDocPath(tabDocId, currentEmail())).data.inviteeEmail == currentEmail()
+            && get(inviteDocPath(tabDocId, currentEmail())).data.status in ['pending', 'accepted']
+            && currentEmail() in incoming().memberEmails
+            && incoming().memberEmails.hasAll(existing().memberEmails)
+            && incoming().memberEmails.removeAll(existing().memberEmails).hasOnly([currentEmail()])
+            && (
+              (
+                get(inviteDocPath(tabDocId, currentEmail())).data.role == 'editor'
+                && incoming().editorEmails.hasAll(existing().editorEmails)
+                && incoming().editorEmails.removeAll(existing().editorEmails).hasOnly([currentEmail()])
+              )
+              || (
+                get(inviteDocPath(tabDocId, currentEmail())).data.role == 'viewer'
+                && incoming().editorEmails == existing().editorEmails
+              )
+            )
+          )
+        );
+      allow delete: if isValidId(tabDocId) && isSignedIn() && existing().ownerUid == request.auth.uid;
+
+      // Confirmed Members Subcollection
+      match /members/{memberUid} {
+        allow get: if isValidId(tabDocId) && isValidId(memberUid) && isTabParentMember(tabDocId);
+        allow list: if isSignedIn() && existing().uid == request.auth.uid;
+        allow create: if isValidId(tabDocId)
+          && isValidId(memberUid)
+          && isSignedIn()
+          && isValidMember(incoming())
+          && memberUid == request.auth.uid
+          && incoming().uid == request.auth.uid
+          && incoming().email == currentEmail()
+          && incoming().joinedAt == request.time
+          && (
+            (
+              get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.ownerUid == request.auth.uid
+              && incoming().role == 'editor'
+            )
+            || (
+              exists(inviteDocPath(tabDocId, currentEmail()))
+              && get(inviteDocPath(tabDocId, currentEmail())).data.inviteeEmail == currentEmail()
+              && get(inviteDocPath(tabDocId, currentEmail())).data.status in ['pending', 'accepted']
+              && incoming().role == get(inviteDocPath(tabDocId, currentEmail())).data.role
+            )
+          );
+        allow update: if isValidId(tabDocId)
+          && isValidId(memberUid)
+          && isSignedIn()
+          && isValidMember(incoming())
+          && get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.ownerUid == request.auth.uid
+          && incoming().uid == existing().uid
+          && incoming().email == existing().email
+          && incoming().joinedAt == existing().joinedAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'name']);
+        allow delete: if isValidId(tabDocId)
+          && isValidId(memberUid)
+          && isSignedIn()
+          && (
+            memberUid == request.auth.uid
+            || get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.ownerUid == request.auth.uid
+          );
+      }
+
+      // Collaborative Notes inside Shared Tab
+      match /notes/{noteId} {
+        allow get: if isValidId(tabDocId) && isValidId(noteId) && isTabParentMember(tabDocId);
+        allow list: if isSignedIn() && isTabParentMember(tabDocId);
+        allow create: if isValidId(tabDocId)
+          && isValidId(noteId)
+          && isSignedIn()
+          && isValidSharedNote(incoming())
+          && isTabParentEditor(tabDocId)
+          && incoming().tabDocId == tabDocId
+          && incoming().noteId == noteId
+          && incoming().authorUid == request.auth.uid
+          && incoming().authorEmail == currentEmail()
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(tabDocId)
+          && isValidId(noteId)
+          && isSignedIn()
+          && isValidSharedNote(incoming())
+          && incoming().noteId == existing().noteId
+          && incoming().tabDocId == existing().tabDocId
+          && incoming().tabId == existing().tabId
+          && incoming().authorUid == existing().authorUid
+          && incoming().authorEmail == existing().authorEmail
+          && incoming().authorName == existing().authorName
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            (
+              isTabParentEditor(tabDocId)
+              && incoming().diff(existing()).affectedKeys().hasOnly([
+                'title', 'previewText', 'fullContent', 'color', 'pinColor',
+                'penColor', 'fontStyle', 'isPinned', 'rotation', 'commentsCount', 'updatedAt'
+              ])
+            )
+            || (
+              isTabParentMember(tabDocId)
+              && incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount', 'updatedAt'])
+            )
+          );
+        allow delete: if isValidId(tabDocId)
+          && isValidId(noteId)
+          && isSignedIn()
+          && isTabParentEditor(tabDocId);
+
+        // Comments on Shared Tab Note
+        match /comments/{commentId} {
+          allow get: if isValidId(tabDocId) && isValidId(noteId) && isValidId(commentId) && isTabParentMember(tabDocId);
+          allow list: if isSignedIn() && isTabParentMember(tabDocId);
+          allow create: if isValidId(tabDocId)
+            && isValidId(noteId)
+            && isValidId(commentId)
+            && isSignedIn()
+            && isValidComment(incoming())
+            && isTabParentMember(tabDocId)
+            && exists(/databases/$(database)/documents/sharedTabs/$(tabDocId)/notes/$(noteId))
+            && incoming().commentId == commentId
+            && incoming().noteId == noteId
+            && incoming().tabDocId == tabDocId
+            && incoming().authorUid == request.auth.uid
+            && incoming().authorEmail == currentEmail()
+            && incoming().createdAt == request.time;
+          allow delete: if isValidId(tabDocId)
+            && isValidId(noteId)
+            && isValidId(commentId)
+            && isSignedIn()
+            && (
+              existing().authorUid == request.auth.uid
+              || get(/databases/$(database)/documents/sharedTabs/$(tabDocId)).data.ownerUid == request.auth.uid
+            );
+        }
+      }
+    }
+
+    // 2. Semi-Automatic Invitations
+    match /tabInvites/{inviteId} {
+      allow get: if isValidId(inviteId) && isSignedIn() && (
+        existing().inviterUid == request.auth.uid
+        || existing().inviteeEmail == currentEmail()
+      );
+      allow list: if isSignedIn() && (
+        existing().inviterUid == request.auth.uid
+        || existing().inviteeEmail == currentEmail()
+      );
+      allow create: if isValidId(inviteId)
+        && isSignedIn()
+        && isValidInvite(incoming())
+        && inviteId == incoming().tabDocId + '__' + sanitizeEmail(incoming().inviteeEmail)
+        && exists(/databases/$(database)/documents/sharedTabs/$(incoming().tabDocId))
+        && get(/databases/$(database)/documents/sharedTabs/$(incoming().tabDocId)).data.ownerUid == request.auth.uid
+        && incoming().inviterUid == request.auth.uid
+        && incoming().inviterEmail == currentEmail()
+        && incoming().inviteeEmail == incoming().inviteeEmail.lower()
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(inviteId)
+        && isSignedIn()
+        && isValidInvite(incoming())
+        && incoming().tabDocId == existing().tabDocId
+        && incoming().tabId == existing().tabId
+        && incoming().inviterUid == existing().inviterUid
+        && incoming().inviterEmail == existing().inviterEmail
+        && incoming().inviteeEmail == existing().inviteeEmail
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action A: Invitee accepts or declines
+          (
+            existing().inviteeEmail == currentEmail()
+            && existing().status == 'pending'
+            && incoming().status in ['accepted', 'declined']
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'inviteeName', 'updatedAt'])
+          )
+          // Action B: Inviter updates role or resends a declined/pending invite
+          || (
+            existing().inviterUid == request.auth.uid
+            && incoming().status in ['pending', 'accepted']
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'role', 'inviteeName', 'tabLabel', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(inviteId)
+        && isSignedIn()
+        && existing().inviterUid == request.auth.uid;
+    }
+
+    // 3. Private User Demographic Profiles (Owner-Only PII Isolation)
+    match /userProfiles/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && isValidUserProfile(incoming())
+        && userId == request.auth.uid
+        && incoming().uid == request.auth.uid
+        && incoming().email == currentEmail()
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && isValidUserProfile(incoming())
+        && userId == request.auth.uid
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'age', 'ageNotDeclared', 'location', 'locationNotDeclared',
+          'gender', 'sexualOrientation', 'generalInterests', 'relatedInterests',
+          'autoFilledFromGoogle', 'updatedAt'
+        ]);
+      allow delete: if isValidId(userId) && isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 3b. Anonymized Audience Segments (Split Collection without PII for Admin Intersection Analytics)
+    match /audienceSegments/{userId} {
+      allow get: if isValidId(userId) && (
+        isAdmin()
+        || (isSignedIn() && request.auth.uid == userId)
+      );
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && isValidAudienceSegment(incoming())
+        && userId == request.auth.uid
+        && incoming().uid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && isValidAudienceSegment(incoming())
+        && userId == request.auth.uid
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'ageBracket', 'gender', 'regionLabel',
+          'generalInterests', 'relatedInterests', 'updatedAt'
+        ]);
+      allow delete: if isValidId(userId) && (
+        isAdmin()
+        || (isSignedIn() && request.auth.uid == userId)
+      );
+    }
+
+    // 4. Admins Allowlist (managed via Firebase Console)
+    match /admins/{adminUid} {
+      allow read, write: if false;
+    }
+
+    // 5. Daily Ticker Promo (Public single-doc read, Admin-only write)
+    match /dailyPromos/{promoId} {
+      allow get: if isValidId(promoId);
+      allow list: if false;
+      allow create: if isValidId(promoId)
+        && isAdmin()
+        && isValidDailyPromo(incoming())
+        && incoming().updatedByEmail == currentEmail()
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(promoId)
+        && isAdmin()
+        && isValidDailyPromo(incoming())
+        && incoming().updatedByEmail == currentEmail()
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'tickerText', 'title', 'description', 'sponsorName',
+          'ctaLabel', 'targetUrl', 'noteColor', 'isActive',
+          'updatedByEmail', 'updatedAt'
+        ]);
+      allow delete: if isValidId(promoId) && isAdmin();
+    }
+
+    // 6. Curated & Profile-Targeted Promo Campaigns
+    match /promoCampaigns/{campaignId} {
+      allow get: if isValidId(campaignId) && (
+        isAdmin()
+        || (existing().status == 'approved' && existing().isActive == true)
+      );
+      allow list: if isAdmin()
+        || (existing().status == 'approved' && existing().isActive == true);
+      allow create: if isValidId(campaignId)
+        && isAdmin()
+        && isValidPromoCampaign(incoming())
+        && incoming().campaignId == campaignId
+        && incoming().updatedByEmail == currentEmail()
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(campaignId)
+        && isAdmin()
+        && isValidPromoCampaign(incoming())
+        && incoming().campaignId == existing().campaignId
+        && incoming().updatedByEmail == currentEmail()
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'sourcePlatform', 'status', 'isActive', 'tickerText', 'title',
+          'description', 'sponsorName', 'priceLabel', 'ctaLabel', 'targetUrl',
+          'noteColor', 'targetGender', 'targetAgeMin', 'targetAgeMax',
+          'targetLocation', 'targetInterests', 'curationRationale', 'sourceMethod',
+          'updatedByEmail', 'updatedAt'
+        ]);
+      allow delete: if isValidId(campaignId) && isAdmin();
+    }
+  }
+}

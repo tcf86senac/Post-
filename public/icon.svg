@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0191FE" />
+      <stop offset="100%" stop-color="#016AF5" />
+    </linearGradient>
+    <filter id="noteDrop" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="2" dy="14" stdDeviation="14" flood-color="#002D72" flood-opacity="0.32" />
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#bgBlue)" />
+
+  <g transform="translate(256 256) rotate(4) translate(-182 -182)" filter="url(#noteDrop)">
+    <path
+      d="M 28 0 L 336 0 Q 364 0 364 28 L 364 252 C 364 298 312 364 252 364 L 28 364 Q 0 364 0 336 L 0 28 Q 0 0 28 0 Z"
+      fill="#FEE725"
+    />
+    <path
+      d="M 244 364 C 266 346 274 284 282 268 C 292 250 342 254 364 242 C 362 292 308 358 244 364 Z"
+      fill="#FFA800"
+    />
+    <path
+      d="M 244 364 C 262 340 270 292 282 272 C 292 256 334 256 364 242 C 330 276 286 330 244 364 Z"
+      fill="#FFD524"
+    />
+    <circle cx="182" cy="76" r="26" fill="#049A35" />
+    <rect x="159" y="114" width="46" height="176" rx="23" fill="#049A35" />
+    <rect x="78" y="160" width="208" height="46" rx="23" fill="#049A35" />
+  </g>
+</svg>

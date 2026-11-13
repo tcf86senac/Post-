@@ -1,0 +1,55 @@
+{
+  "id": "/",
+  "name": "Post+ — Mural de Notas Inteligente",
+  "short_name": "Post+",
+  "description": "Seu mural de notas adesivas com alfinetes 3D, IA Post+ Lens, Google Drive e abas compartilhadas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F5F7",
+  "theme_color": "#1D86C4",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova Nota",
+      "short_name": "Nova Nota",
+      "description": "Criar uma nova nota adesiva no mural",
+      "url": "/?action=new",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Post+ Lens (IA)",
+      "short_name": "Lens IA",
+      "description": "Tirar foto de manuscrito ou objeto",
+      "url": "/?action=lens",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Aba Família",
+      "short_name": "Família",
+      "description": "Abrir aba compartilhada da família",
+      "url": "/?tab=familia",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Remix Post+",
+  "description": "A clean, minimalist productivity app featuring organized digital sticky notes for efficient task management and seamless data syncing.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,680 @@
+{
+  "entities": {
+    "SharedTab": {
+      "title": "SharedTab",
+      "description": "Categoria/aba compartilhada do mural Post+ sincronizada entre contas aceitas.",
+      "type": "object",
+      "properties": {
+        "tabId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "ownerUid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "ownerEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "ownerName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "shareCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 64
+        },
+        "isShared": {
+          "type": "boolean"
+        },
+        "memberEmails": {
+          "type": "array"
+        },
+        "editorEmails": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "tabId",
+        "label",
+        "ownerUid",
+        "ownerEmail",
+        "ownerName",
+        "shareCode",
+        "isShared",
+        "memberEmails",
+        "editorEmails",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SharedTabMember": {
+      "title": "SharedTabMember",
+      "description": "Participante confirmado de uma aba compartilhada.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "role": {
+          "type": "string",
+          "enum": ["editor", "viewer"]
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "name", "role", "joinedAt"]
+    },
+    "TabInvite": {
+      "title": "TabInvite",
+      "description": "Convite semiautomatico enviado para um e-mail com status pendente, aceito ou recusado.",
+      "type": "object",
+      "properties": {
+        "tabDocId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "tabId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "tabLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "inviterUid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "inviterEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "inviterName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "inviteeEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "inviteeName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "role": {
+          "type": "string",
+          "enum": ["editor", "viewer"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "declined"]
+        },
+        "shareCode": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "tabDocId",
+        "tabId",
+        "tabLabel",
+        "inviterUid",
+        "inviterEmail",
+        "inviterName",
+        "inviteeEmail",
+        "inviteeName",
+        "role",
+        "status",
+        "shareCode",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SharedNote": {
+      "title": "SharedNote",
+      "description": "Nota colaborativa dentro de uma aba compartilhada.",
+      "type": "object",
+      "properties": {
+        "noteId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "tabDocId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "tabId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "previewText": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "fullContent": {
+          "type": "string",
+          "maxLength": 10000
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "pinColor": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "penColor": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "fontStyle": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "isPinned": {
+          "type": "boolean"
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "authorUid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "authorEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "authorName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "commentsCount": {
+          "type": "number"
+        },
+        "displayCreatedAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "noteId",
+        "tabDocId",
+        "tabId",
+        "title",
+        "previewText",
+        "fullContent",
+        "color",
+        "pinColor",
+        "penColor",
+        "fontStyle",
+        "isPinned",
+        "rotation",
+        "authorUid",
+        "authorEmail",
+        "authorName",
+        "commentsCount",
+        "displayCreatedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "NoteComment": {
+      "title": "NoteComment",
+      "description": "Comentario em tempo real vinculado a uma nota de aba compartilhada.",
+      "type": "object",
+      "properties": {
+        "commentId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "noteId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "tabDocId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "authorUid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "authorEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "authorName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "commentId",
+        "noteId",
+        "tabDocId",
+        "authorUid",
+        "authorEmail",
+        "authorName",
+        "text",
+        "createdAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Cadastro privado do usuario com preferencias visuais e dados demograficos opcionais.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "age": {
+          "type": "number"
+        },
+        "ageNotDeclared": {
+          "type": "boolean"
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "locationNotDeclared": {
+          "type": "boolean"
+        },
+        "gender": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "sexualOrientation": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "autoFilledFromGoogle": {
+          "type": "boolean"
+        },
+        "generalInterests": {
+          "type": "array",
+          "description": "Ate 10 interesses gerais escolhidos no cadastro."
+        },
+        "relatedInterests": {
+          "type": "array",
+          "description": "Subtemas relacionados escolhidos a partir dos 50 cards gerados."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "age",
+        "ageNotDeclared",
+        "location",
+        "locationNotDeclared",
+        "gender",
+        "sexualOrientation",
+        "generalInterests",
+        "relatedInterests",
+        "autoFilledFromGoogle",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AudienceSegment": {
+      "title": "AudienceSegment",
+      "description": "Segmento anonimizado (sem PII) com faixa etaria, genero, regiao e interesses para agrupamento por intersecao no Admin.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "ageBracket": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "gender": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "regionLabel": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "generalInterests": {
+          "type": "array"
+        },
+        "relatedInterests": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "ageBracket",
+        "gender",
+        "regionLabel",
+        "generalInterests",
+        "relatedInterests",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DailyPromo": {
+      "title": "DailyPromo",
+      "description": "Configuracao do letreiro diario e nota patrocinada em 2 cliques gerenciado pelo administrador.",
+      "type": "object",
+      "properties": {
+        "tickerText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "sponsorName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "ctaLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "targetUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "noteColor": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "updatedByEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "tickerText",
+        "title",
+        "description",
+        "sponsorName",
+        "ctaLabel",
+        "targetUrl",
+        "noteColor",
+        "isActive",
+        "updatedByEmail",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PromoCampaign": {
+      "title": "PromoCampaign",
+      "description": "Campanha/produto captado de marketplaces (Shopee, TikTok, Amazon, Mercado Livre) com curadoria obrigatoria do admin e segmentacao por perfil.",
+      "type": "object",
+      "properties": {
+        "campaignId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "sourcePlatform": {
+          "type": "string",
+          "enum": ["mercadolivre", "shopee", "tiktok", "amazon", "manual"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending_curation", "approved", "rejected", "archived"]
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "tickerText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "sponsorName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "priceLabel": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "ctaLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "targetUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 800
+        },
+        "noteColor": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "targetGender": {
+          "type": "string",
+          "enum": ["all", "Feminino", "Masculino", "Não-binário"]
+        },
+        "targetAgeMin": {
+          "type": "number"
+        },
+        "targetAgeMax": {
+          "type": "number"
+        },
+        "targetLocation": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "targetInterests": {
+          "type": "array",
+          "description": "Conjunto de interesses e subtemas que combinam com o produto."
+        },
+        "curationRationale": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "sourceMethod": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "updatedByEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "campaignId",
+        "sourcePlatform",
+        "status",
+        "isActive",
+        "tickerText",
+        "title",
+        "description",
+        "sponsorName",
+        "priceLabel",
+        "ctaLabel",
+        "targetUrl",
+        "noteColor",
+        "targetGender",
+        "targetAgeMin",
+        "targetAgeMax",
+        "targetLocation",
+        "targetInterests",
+        "curationRationale",
+        "sourceMethod",
+        "updatedByEmail",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/sharedTabs/{tabDocId}": {
+      "schema": { "$ref": "#/entities/SharedTab" },
+      "description": "Abas compartilhadas com participantes aceitos e permissoes."
+    },
+    "/sharedTabs/{tabDocId}/members/{memberUid}": {
+      "schema": { "$ref": "#/entities/SharedTabMember" },
+      "description": "Membros confirmados de cada aba compartilhada."
+    },
+    "/tabInvites/{inviteId}": {
+      "schema": { "$ref": "#/entities/TabInvite" },
+      "description": "Convites pendentes/aceitos/recusados vinculados ao e-mail do convidado."
+    },
+    "/sharedTabs/{tabDocId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/SharedNote" },
+      "description": "Notas sincronizadas dentro de cada aba compartilhada."
+    },
+    "/sharedTabs/{tabDocId}/notes/{noteId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/NoteComment" },
+      "description": "Comentarios dos participantes em cada nota compartilhada."
+    },
+    "/userProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Perfil privado do usuario com idade, localizacao, genero, orientacao e interesses."
+    },
+    "/audienceSegments/{userId}": {
+      "schema": { "$ref": "#/entities/AudienceSegment" },
+      "description": "Segmento anonimizado sem PII para leitura de intersecoes de interesses pelo Admin."
+    },
+    "/dailyPromos/{promoId}": {
+      "schema": { "$ref": "#/entities/DailyPromo" },
+      "description": "Letreiro e nota patrocinada do dia publicado pelo administrador."
+    },
+    "/promoCampaigns/{campaignId}": {
+      "schema": { "$ref": "#/entities/PromoCampaign" },
+      "description": "Campanhas segmentadas captadas de marketplaces e curadas manualmente pelo administrador."
+    }
+  }
+}
